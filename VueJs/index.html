@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuxt.js Blog Application</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: #6e8efb;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #5a7df9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background-color: #ff6b6b;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #ff5252;
+        }
+        
+        .btn-edit {
+            background-color: #4ecdc4;
+            color: white;
+        }
+        
+        .btn-edit:hover {
+            background-color: #3dbbb2;
+        }
+        
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .blog-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .blog-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .blog-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        
+        .blog-content {
+            padding: 20px;
+        }
+        
+        .blog-title {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .blog-description {
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .blog-date {
+            color: #95a5a6;
+            font-size: 14px;
+        }
+        
+        .blog-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-title {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 120px;
+            font-size: 16px;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .empty-state-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        
+        @media (max-width: 768px) {
+            .blog-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div class="container">
+                <div class="header-content">
+                    <div class="logo">Nuxt.js Blog</div>
+                    <button class="btn btn-primary" @click="showAddModal = true">Add New Post</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container">
+            <h1>Latest Blog Posts</h1>
+            
+            <div v-if="posts.length === 0" class="empty-state">
+                <div class="empty-state-icon">📝</div>
+                <h2>No blog posts yet</h2>
+                <p>Click the "Add New Post" button to create your first blog post.</p>
+            </div>
+            
+            <div v-else class="blog-grid">
+                <div v-for="post in posts" :key="post.id" class="blog-card">
+                    <img :src="post.image || 'https://via.placeholder.com/300x200?text=Blog+Image'" :alt="post.title" class="blog-image">
+                    <div class="blog-content">
+                        <h2 class="blog-title">{{ post.title }}</h2>
+                        <p class="blog-description">{{ post.description }}</p>
+                        <p class="blog-date">{{ formatDate(post.date) }}</p>
+                        <div class="blog-actions">
+                            <button class="btn btn-edit" @click="editPost(post)">Edit</button>
+                            <button class="btn btn-danger" @click="deletePost(post.id)">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Post Modal -->
+        <div v-if="showAddModal || showEditModal" class="modal-overlay" @click.self="closeModal">
+            <div class="modal">
+                <h2 class="modal-title">{{ showEditModal ? 'Edit Post' : 'Add New Post' }}</h2>
+                
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-input" v-model="currentPost.title" placeholder="Enter post title">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" v-model="currentPost.description" placeholder="Enter post description"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Image</label>
+                    <input type="file" @change="handleImageUpload" accept="image/*" class="form-input">
+                    <div v-if="currentPost.image" style="margin-top: 10px;">
+                        <img :src="currentPost.image" alt="Preview" style="max-width: 100%; max-height: 200px; margin-top: 10px;">
+                    </div>
+                </div>
+                
+                <div class="form-group" v-if="showEditModal">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" v-model="currentPost.date">
+                </div>
+                
+                <div class="form-actions">
+                    <button class="btn" @click="closeModal">Cancel</button>
+                    <button class="btn btn-primary" @click="savePost">{{ showEditModal ? 'Update Post' : 'Add Post' }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                posts: [],
+                showAddModal: false,
+                showEditModal: false,
+                currentPost: {
+                    id: null,
+                    title: '',
+                    description: '',
+                    image: '',
+                    date: new Date().toISOString().split('T')[0]
+                }
+            },
+            mounted() {
+                // Load posts from localStorage on component mount
+                this.loadPosts();
+            },
+            methods: {
+                loadPosts() {
+                    // Try to load posts from localStorage
+                    const savedPosts = localStorage.getItem('blogPosts');
+                    if (savedPosts) {
+                        this.posts = JSON.parse(savedPosts);
+                    } else {
+                        // Sample data for demonstration
+                        this.posts = [
+                            {
+                                id: 1,
+                                title: 'Getting Started with Nuxt.js',
+                                description: 'Learn how to create your first Nuxt.js application with this step-by-step tutorial. Perfect for beginners!',
+                                image: 'https://via.placeholder.com/300x200/6e8efb/ffffff?text=Nuxt.js',
+                                date: '2023-05-15'
+                            },
+                            {
+                                id: 2,
+                                title: 'Vue.js Components Basics',
+                                description: 'Understanding Vue.js components is crucial for building modern web applications. This guide covers the fundamentals.',
+                                image: 'https://via.placeholder.com/300x200/a777e3/ffffff?text=Vue.js',
+                                date: '2023-06-02'
+                            }
+                        ];
+                        this.savePosts();
+                }                                   
+                },
+                savePosts() {
+                    // Save posts to localStorage
+                    localStorage.setItem('blogPosts', JSON.stringify(this.posts));
+                },
+                handleImageUpload(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.currentPost.image = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+                addPost() {
+                    // Generate a unique ID for the new post
+                    const newId = this.posts.length > 0 ? Math.max(...this.posts.map(p => p.id)) + 1 : 1;
+                    
+                    // Add the new post to the array
+                    this.posts.push({
+                        id: newId,
+                        title: this.currentPost.title,
+                        description: this.currentPost.description,
+                        image: this.currentPost.image,
+                        date: new Date().toISOString().split('T')[0]
+                    });
+                    
+                    // Save to localStorage
+                    this.savePosts();
+                    
+                    // Reset the form and close the modal
+                    this.resetForm();
+                    this.showAddModal = false;
+                },
+                editPost(post) {
+                    // Set the current post to the one being edited
+                    this.currentPost = {...post};
+                    this.showEditModal = true;
+                },
+                updatePost() {
+                    // Find the index of the post being edited
+                    const index = this.posts.findIndex(p => p.id === this.currentPost.id);
+                    
+                    if (index !== -1) {
+                        // Update the post in the array
+                        this.posts.splice(index, 1, {...this.currentPost});
+                        
+                        // Save to localStorage
+                        this.savePosts();
+                        
+                        // Reset the form and close the modal
+                        this.resetForm();
+                        this.showEditModal = false;
+                    }
+                },
+                deletePost(id) {
+                    if (confirm('Are you sure you want to delete this post?')) {
+                        // Filter out the post with the given ID
+                        this.posts = this.posts.filter(post => post.id !== id);
+                        
+                        // Save to localStorage
+                        this.savePosts();
+                    }
+                },
+                savePost() {
+                    if (this.showEditModal) {
+                        this.updatePost();
+                    } else {
+                        this.addPost();
+                    }
+                },
+                closeModal() {
+                    this.showAddModal = false;
+                    this.showEditModal = false;
+                    this.resetForm();
+                },
+                resetForm() {
+                    this.currentPost = {
+                        id: null,
+                        title: '',
+                        description: '',
+                        image: '',
+                        date: new Date().toISOString().split('T')[0]
+                    };
+                },
+                formatDate(dateString) {
+                    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                    return new Date(dateString).toLocaleDateString(undefined, options);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
